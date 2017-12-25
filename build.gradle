@@ -1,0 +1,96 @@
+plugins {
+    id 'de.undercouch.download' version '3.3.0'
+    id 'no.nils.wsdl2java' version '0.10'
+}
+
+repositories {
+    mavenCentral()
+}
+
+wsdl2java {
+    generatedWsdlDir = file("$projectDir/src/main/java")
+    wsdlDir = file("$projectDir/src/main/resources/onvif")
+    wsdlsToGenerate = []
+
+    def files = fileTree('src/main/resources/onvif').include('**/*.wsdl')
+    files.each {
+        wsdlsToGenerate << ['-xjc-Xbg', '-catalog', "$projectDir/src/main/resources/xml-catalog.xml", '-autoNameResolution', '-verbose', it]
+    }
+}
+
+wsdl2javaExt {
+    cxfVersion = "3.1.0"
+}
+
+ext {
+    wsdls = [
+        "$projectDir/src/main/resources/onvif": [
+            'https://www.onvif.org/ver10/actionengine.wsdl',
+            'https://www.onvif.org/ver10/advancedsecurity/wsdl/advancedsecurity.wsdl',
+            'https://www.onvif.org/ver10/analyticsdevice.wsdl',
+            'https://www.onvif.org/ver10/credential/wsdl/credential.wsdl',
+            'https://www.onvif.org/ver10/device/wsdl/devicemgmt.wsdl',
+            'https://www.onvif.org/ver10/deviceio.wsdl',
+            'https://www.onvif.org/ver10/display.wsdl',
+            'https://www.onvif.org/ver10/events/wsdl/event.wsdl',
+            'https://www.onvif.org/ver10/media/wsdl/media.wsdl',
+            'https://www.onvif.org/ver10/pacs/accesscontrol.wsdl',
+            'https://www.onvif.org/ver10/pacs/accessrules.wsdl',
+            'https://www.onvif.org/ver10/pacs/doorcontrol.wsdl',
+            'https://www.onvif.org/ver10/pacs/types.xsd',
+            'https://www.onvif.org/ver10/provisioning/wsdl/provisioning.wsdl',
+            'https://www.onvif.org/ver10/receiver.wsdl',
+            'https://www.onvif.org/ver10/recording.wsdl',
+            'https://www.onvif.org/ver10/replay.wsdl',
+            'https://www.onvif.org/ver10/schedule/wsdl/schedule.wsdl',
+            'https://www.onvif.org/ver10/schema/common.xsd',
+            'https://www.onvif.org/ver10/schema/metadatastream.xsd',
+            'https://www.onvif.org/ver10/schema/onvif.xsd',
+            'https://www.onvif.org/ver10/search.wsdl',
+            'https://www.onvif.org/ver10/thermal/wsdl/thermal.wsdl',
+            'https://www.onvif.org/ver20/analytics/radiometry.xsd',
+            'https://www.onvif.org/ver20/analytics/wsdl/analytics.wsdl',
+            'https://www.onvif.org/ver20/analytics/rules.xsd',
+            'https://www.onvif.org/ver20/imaging/wsdl/imaging.wsdl',
+            'https://www.onvif.org/ver20/media/wsdl/media.wsdl',
+            'https://www.onvif.org/ver20/ptz/wsdl/ptz.wsdl'
+        ],
+        "$projectDir/src/main/resources/oasis-open": [
+            'http://docs.oasis-open.org/wsn/b-2.xsd',
+            'http://docs.oasis-open.org/wsn/bw-2.wsdl',
+            'http://docs.oasis-open.org/wsn/t-1.xsd',
+            'http://docs.oasis-open.org/wsrf/bf-2.xsd',
+            'http://docs.oasis-open.org/wsrf/r-2.xsd',
+            'http://docs.oasis-open.org/wsrf/rw-2.wsdl'
+        ],
+        "$projectDir/src/main/resources/w3": [
+            'https://www.w3.org/2001/xml.xsd',
+            'https://www.w3.org/2003/05/soap-envelope',
+            'https://www.w3.org/2004/08/xop/include',
+            'https://www.w3.org/2005/05/xmlmime',
+            'https://www.w3.org/2005/08/addressing/ws-addr.xsd'
+        ]
+    ]
+}
+
+task downloadWsdls {
+    doLast {
+        wsdls.each { destinationDirectory, sourceFiles ->
+            sourceFiles.each { sourceFile ->
+                def destinationFile = new File(destinationDirectory, new URL(sourceFile).path)
+                if (!destinationFile.exists()) {
+                    download {
+                        src sourceFile
+                        dest destinationFile.absolutePath
+                    }
+                }
+            }
+        }
+    }
+}
+
+task deleteFiles(type: Delete) {
+    delete wsdl2java.generatedWsdlDir, wsdls.keySet()
+}
+
+clean.dependsOn deleteFiles
